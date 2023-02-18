@@ -1,0 +1,88 @@
+version: "3.8"
+
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: inference.minio-s3
+    restart: on-failure
+    shm_size: 2gb
+    volumes:
+      - ./minio/data:/data:rw
+      - ./minio/config:/root/.minio
+    environment:
+      MINIO_ROOT_USER: user
+      MINIO_ROOT_PASSWORD: user123456
+      MINIO_DOMAIN: minio-s3
+      MINIO_REGION_NAME: inference-test-region
+    ports: 
+      - "9000:9000"
+      - "9001:9001"
+    entrypoint: sh
+    command: -c 'mkdir -p /data/models && mkdir -p /data/loki && minio server /data --console-address "0.0.0.0:9001"'
+
+  triton-server:
+    image: nvcr.io/nvidia/tritonserver:23.01-py3
+    container_name: inference.triton-server
+    ports:
+      - "8000:8000" # HTTP
+      - "8001:8001" # gRPC server
+      - "8002:8002" # metrics
+    environment: # From your MinIO user & password setup above
+      AWS_ACCESS_KEY_ID: user
+      AWS_SECRET_ACCESS_KEY: user123456
+    # Uncomment below for GPU use
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           capabilities: [gpu]
+    command: tritonserver --model-store=s3://minio:9000/models --model-control-mode="poll" --log-info true
+    shm_size: 2gb
+    # ulimits:
+    #   memlock: -1
+    #   stack: 
+    restart: on-failure
+    depends_on:
+      - minio
+
+  prometheus:
+    image: quay.io/prometheus/prometheus:v2.40.5
+    container_name: inference.prometheus
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana-oss:9.3.1
+    container_name: inference.grafana
+    ports:
+      - 3000:3000
+
+# -target=all -> Run in Monolithic mode where only one loki container is needed for both read + write paths
+# https://grafana.com/docs/loki/latest/fundamentals/architecture/deployment-modes/
+# Stopped at: fixing this error when adding loki config to grafana
+# https://github.com/grafana/loki/blob/main/docs/sources/operations/troubleshooting.md#data-source-connected-but-no-labels-received-verify-that-loki-and-promtail-is-configured-properly
+  loki:
+    container_name: inference.loki
+    image: grafana/loki:2.6.1
+    command: "-config.file=/etc/loki/config.yaml"
+    ports:
+      - 3102:3100
+      - 7946
+      - 9095
+    volumes:
+      - ./config/loki/loki-config.yaml:/etc/loki/config.yaml
+    depends_on:
+      - minio
+
+  promtail:
+    container_name: inference.promtail
+    image: grafana/promtail:2.6.0
+    volumes:
+      - ./config/promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml
+      - ./config/promtail/data:/data
+    command: -config.file=/etc/promtail/promtail-config.yaml
+
+volumes:
+  data: {}
+  config: {}

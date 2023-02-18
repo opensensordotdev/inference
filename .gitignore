@@ -1,0 +1,25 @@
+# Rust build
+/target
+.cargo/git
+.cargo/registry
+.cargo/env
+.cargo/bin
+cargo-cache
+
+# Python
+env
+__pycache__
+
+## PyTorch models
+*.pt
+
+# Zarf
+zarf-*
+sha256:*
+
+# Sample ML models for Triton
+/sample_models
+
+# MinIO data & configuration. more specific to not exclude the minio helm chart
+minio/data
+minio/config
