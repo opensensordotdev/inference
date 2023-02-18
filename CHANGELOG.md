@@ -31,11 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 -
 
-## [0.0.3] - 2023-02-17
+## [0.3.0] - 2023-02-17
 
 ### Added
 
 - Initial OSS release
 
-[unreleased]: https://github.com/opensensordotdev/inference/compare/v0.0.3...HEAD
-[0.0.3]: https://github.com/opensensordotdev/inference/releases/tag/v0.0.3
+[unreleased]: https://github.com/opensensordotdev/inference/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/opensensordotdev/inference/releases/tag/v0.3.0
